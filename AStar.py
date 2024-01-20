@@ -2,25 +2,19 @@
     auxiliary functions.
 '''
 from math import sqrt
+from utils import coord2ij, cost
 
-def boundary_check(node1, node2, obstacle_map):
-    # node1: the first node
-    # node2: the second node
-    # obstacle_map: the obstacle map
-    # return: True if the link is valid, False otherwise
 
-    # Check value of the obstacle map at i, j computed with coord2ij
-    a = 1
 
 
 def h_oct(x_cur, x_target):
-    # x_cur: current position
-    # x_target: target position
+    # x_cur: current node
+    # x_target: target node
 
-    x1 = x_cur[0]
-    y1 = x_cur[1]
-    x2 = x_target[0]
-    y2 = x_target[1]
+    x1 = x_cur.pos[0]
+    y1 = x_cur.pos[1]
+    x2 = x_target.pos[0]
+    y2 = x_target.pos[1]
 
     dx = abs(x1 - x2)
     dy = abs(y1 - y2)
@@ -39,7 +33,7 @@ def reconstruct_path(cameFrom, current):
         total_path.append(current)
     return total_path
  
-def Astar(x_pos, x_target):
+def Astar(x_pos, x_target, boundary_map):
     # x_pos:
     # x_target:
     # return: path, cost
@@ -55,14 +49,24 @@ def Astar(x_pos, x_target):
     gScore = {}
     gScore[x_pos] = 0
     fScore = {}
-    fScore[x_pos] = h_oct(x_pos)
+    fScore[x_pos] = h_oct(x_pos, x_target)
 
-    while not open_set.empty():
+    while open_set: # while open_set is not empty
         current = open_set.pop()
         if current == x_target:
             return reconstruct_path(cameFrom, current), gScore[current]
-        for neighbor in current.neighbors:
-            tentative_gScore = gScore[current] + neighbor.G()
+        # compute neighbors of current_node
+        cur_neighbors = current.neighbors(10)
+        for neighbor in cur_neighbors:
+            ## Boundary check
+            # Get the coordinates of the current node
+            x1 = current.pos[0]
+            y1 = current.pos[1]
+            [i, j] = coord2ij(x1, y1, 0, 44990)
+            if boundary_map[i][j] == 255:
+                tentative_gScore = float('inf')
+            else:
+                tentative_gScore = gScore[current] + cost(current, neighbor)
             if neighbor not in gScore or tentative_gScore < gScore[neighbor]:
                 cameFrom[neighbor] = current
                 gScore[neighbor] = tentative_gScore
