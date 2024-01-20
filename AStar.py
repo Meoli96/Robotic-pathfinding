@@ -3,8 +3,21 @@
 '''
 from math import sqrt
 from utils import coord2ij, cost
+import numpy as np
 
+def boundary_check(node, boundary_map):
+    # node: a node
+    # boundary_map: a 2D array
+    # return: True if the node is in the boundary, False otherwise
 
+    # Get the coordinates of the current node
+    x1 = node.pos[0]
+    y1 = node.pos[1]
+    [i, j] = coord2ij(x1, y1, 0, 29990)
+    if boundary_map[i][j] == 255 or x1 < 0 or x1 > 49990 or y1 < 0 or y1 > 29990:
+        return False
+    else:
+        return True
 
 
 def h_oct(x_cur, x_target):
@@ -33,7 +46,7 @@ def reconstruct_path(cameFrom, current):
         total_path.append(current)
     return total_path
  
-def Astar(x_pos, x_target, boundary_map):
+def run(x_pos, x_target, boundary_map):
     # x_pos:
     # x_target:
     # return: path, cost
@@ -60,8 +73,8 @@ def Astar(x_pos, x_target, boundary_map):
         for neighbor in cur_neighbors:
             ## Boundary check
             # Get the coordinates of the current node
-            x1 = current.pos[0]
-            y1 = current.pos[1]
+            x1 = neighbor.pos[0]
+            y1 = neighbor.pos[1]
             [i, j] = coord2ij(x1, y1, 0, 29990)
             if boundary_map[i][j] == 255:
                 tentative_gScore = float('inf')
@@ -70,7 +83,7 @@ def Astar(x_pos, x_target, boundary_map):
             if neighbor not in gScore or tentative_gScore < gScore[neighbor]:
                 cameFrom.append(current)
                 gScore[neighbor] = tentative_gScore
-                fScore[neighbor] = gScore[neighbor] + h_oct(neighbor)
+                fScore[neighbor] = gScore[neighbor] + h_oct(neighbor,x_target)
                 if neighbor not in open_set:
                     open_set.append(neighbor) 
 
@@ -78,6 +91,8 @@ def Astar(x_pos, x_target, boundary_map):
 
 
 
-
-
-
+class AStar:
+    def __init__(self, x_pos, x_target, boundary_map):
+        self.x_pos = x_pos
+        self.x_target = x_target
+        self.boundary_map = boundary_map

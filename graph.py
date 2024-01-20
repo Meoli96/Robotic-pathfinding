@@ -31,56 +31,46 @@ class Node:
         n_down_right = Node([cur_pos[0] + res, cur_pos[1] - res])
 
         # Add nodes to the list
-        # Remember the order you're returning: clockwise starting from up
-        return [n_up, n_up_right, n_right, n_down_right, n_down, n_down_left, n_left, n_up_left]
+        # Remember the order you're returning: anti-clockwise starting from up
+        return [n_up, n_up_left, n_left, n_down_left, n_down, n_down_right, n_right, n_up_right]
 
 class Link:
-    def __init__(self, node1, node2):
+    def __init__(self, node1, node2, direction = 0):
+        assert node1 != node2
+        assert direction >= 0 and direction <= 7 # 8 directions, 0 is up, increasing anti-clockwise
         self.node1 = node1
         self.node2 = node2
+        self.direction = direction
         self.cost = sqrt((node1.pos[0] - node2.pos[0])**2 + (node1.pos[1] - node2.pos[1])**2)
 
 
 class Graph:
+    # This class generates a graph from a list of nodes and a list of links
     def __init__(self, nodes, links):
-        self.nodes = nodes
         self.links = links
+        self.n_links = len(links)
 
-    def add_node(self, node):
-        self.nodes.append(node)
+ 
 
     def add_link(self, link):
         self.links.append(link)
+        self.n_links += 1
 
-    def get_node(self, pos):
-        # Return the node with the given position
-        for node in self.nodes:
-            if node.pos == pos:
-                return node
-        return None
 
-    def get_link(self, node1, node2):
-        # Return the link between the given nodes
-        for link in self.links:
-            if (link.node1 == node1 and link.node2 == node2) or (link.node1 == node2 and link.node2 == node1):
-                return link
-        return None
 
-    def get_neighbors(self, node):
-        # Return the neighbors of the given node
-        neighbors = []
-        for link in self.links:
-            if link.node1 == node:
-                neighbors.append(link.node2)
-            elif link.node2 == node:
-                neighbors.append(link.node1)
-        return neighbors
 
-    def get_cost(self, node1, node2):
+    def get_cost(self, node1 = None, node2 = None):
         # Return the cost of the link between the given nodes
+        # If no nodes are given, return the cost of the whole graph
+        if node1 == None and node2 == None:
+            cost = 0
+            for link in self.links:
+                cost += link.cost
+            return cost
+        # else return the cost of the link between the two nodes
         for link in self.links:
             if (link.node1 == node1 and link.node2 == node2) or (link.node1 == node2 and link.node2 == node1):
                 return link.cost
         return None
 
- 
+
