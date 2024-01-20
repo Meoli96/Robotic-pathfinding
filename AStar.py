@@ -62,13 +62,13 @@ def Astar(x_pos, x_target, boundary_map):
             # Get the coordinates of the current node
             x1 = current.pos[0]
             y1 = current.pos[1]
-            [i, j] = coord2ij(x1, y1, 0, 44990)
+            [i, j] = coord2ij(x1, y1, 0, 29990)
             if boundary_map[i][j] == 255:
                 tentative_gScore = float('inf')
             else:
                 tentative_gScore = gScore[current] + cost(current, neighbor)
             if neighbor not in gScore or tentative_gScore < gScore[neighbor]:
-                cameFrom[neighbor] = current
+                cameFrom.append(current)
                 gScore[neighbor] = tentative_gScore
                 fScore[neighbor] = gScore[neighbor] + h_oct(neighbor)
                 if neighbor not in open_set:
