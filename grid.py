@@ -1,7 +1,7 @@
 import numpy as np
 class Grid:
     def __init__(self, *, xlim=10000, ylim=10000, corner = 'ul', res = 10, 
-                 image = None, obstacle = None, landmarks = None):
+                 image: np.ndarray = None, obstacle: np.ndarray = None, landmarks:tuple = None):
         # Initialize the attributes of the Grid class
         # xlim: x limit of the grid
         # ylim: y limit of the grid
@@ -9,11 +9,15 @@ class Grid:
         # res: resolution of the grid
         # image: the image of the grid
         # obstacle: the obstacle of the grid
+
+        # This grid doesnt store the actual grid, but the vectors X and Y 
+        # used to retrieve the grid coordinates
+
         self.xlim = xlim
         self.ylim = ylim
 
-        self.ilim = int(xlim/res)
-        self.jlim = int(ylim/res)
+        self.ilim = int(ylim/res)
+        self.jlim = int(xlim/res)
         self.landmarks = landmarks
 
 
@@ -24,9 +28,17 @@ class Grid:
         
         # Initialize the grid
         self.X = tuple(np.arange(0, xlim, res))
-        self.Y = tuple(np.arange(0, ylim, res))
-
+        self.Y = tuple(np.arange(0, ylim, res))\
         
+        if image is not None and obstacle is not None:
+            # Build map from image superimposing obstacles for display purposes
+            self.map = self.image.copy()
+            for i in range(self.ilim):
+                for j in range(self.jlim):
+                    if self.obstacle[i][j] == 255:
+                        self.map[i][j] = 255
+        elif image is not None:
+            self.map = self.image
 
         if corner == 'ul':
             # Do nothing, we're good to go

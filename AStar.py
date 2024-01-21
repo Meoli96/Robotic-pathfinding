@@ -2,8 +2,7 @@
     auxiliary functions.
 '''
 from math import sqrt
-from utils import coord2ij, cost
-import numpy as np
+
 
 
 def cost(coord1, coord2):

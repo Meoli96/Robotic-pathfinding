@@ -3,8 +3,8 @@ import numpy as np
 class Link:
     def __init__(self, coord1: tuple, coord2: tuple):
         assert coord1 != coord2, "Error: coord1 and coord2 should not be the same"
-        self.coord1 = coord1
-        self.coord2 = coord2
+        self.head = coord1
+        self.tail = coord2
         self.cost = sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2)
 
         d_node = tuple(np.array(coord2) - np.array(coord1))
@@ -41,18 +41,31 @@ class Link:
 
 
 class Graph:
-    # This class generates a graph from a list of links
-    def __init__(self, links):
+    # This class generates a graph from a list of nodes (tuples)
+    def __init__(self, nodes = None, grid = None):
+        self.links = []
+        self.directions = []
+        self.n_links = 0
+        self.cost = 0
+        if nodes is not None:
+            for i in range(len(nodes)-1):
+                link = Link(nodes[i], nodes[i+1])
+                self.add_link(link)
+        self.grid = grid
+        
+        
+        
+    def set_links(self, links):
         self.links = links
         self.n_links = len(links)
-        self.cost = 0
-        for link in links:
-            self.cost += link.cost
-    
+        self.cost = sum([link.cost for link in self.links])
+        self.diff_arr = [self.links[i].direction - self.links[i+1].direction 
+                             for i in range(self.n_links - 1)]
     def add_link(self, link):
         self.links.append(link)
         self.n_links += 1
         self.cost += link.cost
+        self.directions.append(link.direction)
     
     def get_cost(self, coord1 = None, coord2 = None):
         # Return the cost of the link between the given nodes
@@ -64,5 +77,8 @@ class Graph:
             if (link.coord1 == coord1 and link.coord2 == coord2) or (link.coord1 == coord2 and link.coord2 == coord1):
                 return link.cost
         return None
-
+    def get_dir_diff(self):
+        # Return the direction difference between the links
+        return [abs(self.links[i].direction - self.links[i+1].direction) for i in range(self.n_links - 1)]
+    
 
