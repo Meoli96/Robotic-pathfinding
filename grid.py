@@ -1,7 +1,7 @@
 import numpy as np
 class Grid:
     def __init__(self, *, xlim=10000, ylim=10000, corner = 'ul', res = 10, 
-                 image = None, obstacle = None):
+                 image = None, obstacle = None, landmarks = None):
         # Initialize the attributes of the Grid class
         # xlim: x limit of the grid
         # ylim: y limit of the grid
@@ -14,6 +14,7 @@ class Grid:
 
         self.ilim = int(xlim/res)
         self.jlim = int(ylim/res)
+        self.landmarks = landmarks
 
 
         self.corner = corner
@@ -22,8 +23,8 @@ class Grid:
         self.obstacle = obstacle
         
         # Initialize the grid
-        self.X = np.arange(0, xlim, res)
-        self.Y = np.arange(0, ylim, res)
+        self.X = tuple(np.arange(0, xlim, res))
+        self.Y = tuple(np.arange(0, ylim, res))
 
         
 
@@ -43,19 +44,47 @@ class Grid:
         else:
             raise ValueError('Invalid corner value')
         
-    def boundary_check(self, x, y, obstacle_check = True):
+    def boundary_check(self, x, y):
+        return x >= 0 and x <= self.xlim and y >= 0 and y <= self.ylim # True if the point is in the boundary, False otherwise
+    
+    def obstacle_check(self, x, y):
         # x: x coordinate
         # y: y coordinate
         # return: True if the point is in the boundary, False otherwise
 
-        # check grid boundary
-       b_outside = (x < 0 or x > self.xlim or y < 0 or y > self.ylim) # True if the point is outside the grid
-       if self.obstacle is not None and not b_outside and obstacle_check:
-           b_obstacle = self.obstacle[y, x] == 255
-       else: 
-            b_obstacle = False
-       return not b_outside and not b_obstacle # True if the point is inside the grid and not an obstacle
+        # Get the i,j indices of the current point 
+        try:
+            i, j = self.xy2ij(x, y)
+        except ValueError:
+            return False
+        # Check if the point is in the obstacle
+        if self.obstacle is not None:
+            return not self.obstacle[i][j] == 255	
+        return True
 
+    def neighbors(self, x, y, obstacle_check=True):
+        # Generate a list of nodes neighbors of the x,y node, hoctal version
+
+        # Generate inline nodes as tuples (x, y)
+        n_up = (x, y + self.res)
+        n_down = (x, y - self.res)
+        n_left = (x - self.res, y)
+        n_right = (x + self.res, y)
+
+        # Generate diagonal nodes as tuples (x, y)
+        n_up_left = (x - self.res, y + self.res)
+        n_up_right = (x + self.res, y + self.res)
+        n_down_left = (x - self.res, y - self.res)
+        n_down_right = (x + self.res, y - self.res)
+
+        # Add nodes to the list -- Anti-clockwise starting from up
+        neighbors = [n_up, n_up_left, n_left, n_down_left, n_down, n_down_right, n_right, n_up_right]
+
+        # Delete points outside of boundary and return
+        if obstacle_check:
+           return [n for n in neighbors if self.obstacle_check(n[0], n[1])]
+        else:
+            return [n for n in neighbors if self.boundary_check(n[0], n[1])]
 
 
     def xy2ij(self, x, y):
@@ -74,6 +103,6 @@ class Grid:
         i, j = index
         if i < 0 or i >= self.ilim or j < 0 or j >= self.jlim:
             raise ValueError('Index out of range')
-        return self.X[i], self.Y[j]
+        return (self.X[j], self.Y[i])
         
 
