@@ -3,8 +3,8 @@ import numpy as np
 class Link:
     def __init__(self, coord1: tuple, coord2: tuple):
         assert coord1 != coord2, "Error: coord1 and coord2 should not be the same"
-        self.head = coord1
-        self.tail = coord2
+        self.tail = coord1
+        self.head = coord2
         self.cost = sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2)
 
         d_node = tuple(np.array(coord2) - np.array(coord1))
