@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 class Grid:
     def __init__(self, *, xlim=10000, ylim=10000, corner = 'ul', res = 10, 
                  image: np.ndarray = None, obstacle: np.ndarray = None, landmarks:tuple = None):
@@ -98,12 +99,62 @@ class Grid:
         else:
             return [n for n in neighbors if self.boundary_check(n[0], n[1])]
 
+    def get_submap(self, x_start, x_end, y_start, y_end):
+
+   
+
+        # Check if the points are inside the boundary
+        if not self.boundary_check(x_start, y_start) or not self.boundary_check(x_end, y_end):
+            # Who is the offender?
+            if not self.boundary_check(x_start, y_start):
+                # Again, who is the offender?
+                if x_start < 0:
+                    x_start = 0
+                if x_start > self.xlim:
+                    x_start = self.xlim
+                if y_start < 0:
+                    y_start = 0
+                if y_start > self.ylim:
+                    y_start = self.ylim
+            
+            if not self.boundary_check(x_end, y_end):
+                # Again, who is the offender?
+                if x_end < 0:
+                    x_end = 0
+                if x_end > self.xlim:
+                    x_end = self.xlim
+                if y_end < 0:
+                    y_end = 0
+                if y_end > self.ylim:
+                    y_end = self.ylim
+        # Now we are sure that the points are inside the boundary
+        # Get the indices of the points
+        i_start, j_start = self.xy2ij(x_start, y_start)
+        i_end, j_end = self.xy2ij(x_end, y_end)
+        # Check if the points are in the right order\
+        if i_start > i_end:
+            i_start, i_end = i_end, i_start
+        if j_start > j_end:
+            j_start, j_end = j_end, j_start
+        
+
+        # Get the submap
+        submap = self.map[ i_start:i_end, j_start:j_end]
+        return submap
+
+          
+    def plot(self):
+        # Plot the grid
+        plt.imshow(self.map, cmap='gray')
+        plt.gca().invert_yaxis()
+
+
 
     def xy2ij(self, x, y):
         # x: x coordinate
         # y: y coordinate
         # return: i, j, the indices of the grid
-        # This function is going to retrieve negative indices if the point is 
+        # 
         if not self.boundary_check(x, y):
             raise ValueError('Point out of boundary')
         i = int((self.Y[0] - y)/self.res)

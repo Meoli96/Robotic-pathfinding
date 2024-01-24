@@ -1,7 +1,10 @@
 import numpy as np
-from math import sqrt, atan2, pi
+from math import sqrt, atan2, pi, tan
 from graph import *
 from rover import *
+from utils import angle_mod_pi
+
+
 
 class Trajectory:
     # list of links with informations about straight line or not
@@ -20,95 +23,205 @@ class Trajectory:
 
         
 
-def shorten_path(graph: Graph, theta0, theta_target):
-    # path: a graph of nodes, solution of the A* algorithm
-    # pose: the current pose of the robot
 
-    # The idea of this function is to generate a list of straight lines and curves, to be
-    # used by the controller. The controller will follow the lines and curves, and will
-    # stop when it reaches the end of the path.
-    
-    changes = np.diff(graph.directions)
-    
-    # Create a new graph with less links, removing consecutive links with the same direction
-    new_path = []
-    straight_arr = []
-    start_idx = 0
-    counter = 4 # > 3 to have a straight line at the beginning
-    curve_list = []
-    was_straight = 1 
 
-    for data_idx in range(len(changes)):
-        if changes[data_idx] != 0:
-            # Change in direction detected, reset counter of multiple links with the same direction
-            
-            if was_straight: # we are exiting from a straight line
-                # save last straight line to new_path
-                # we can create one link with link_start.tail, link_end-1.head == link_end.tail
-                link_straight = Link(graph.links[start_idx].tail, graph.links[data_idx-1].head) # == graph.links[data_idx].head 
-                new_path.append([link_straight])
-                straight_arr.append(was_straight)
-                
-                was_straight = 0
-                start_idx = data_idx
-                curve_list = []
-
-            
-            counter = 0
-            curve_list.append(graph.links[data_idx])
-        else:
-            # Same direction, increment counter 
-            counter += 1
-            if not was_straight and (counter < 3 or changes[data_idx + 1] != 0): # still in a curved line
-                curve_list.append(graph.links[data_idx])
-
-            elif not was_straight and counter == 3:
-                # We are entering into a straight line, we are ok even if the next link is a curve
-                curve_list.append(graph.links[data_idx])
-                new_path.append(curve_list)
-                straight_arr.append(was_straight)
-
-                start_idx = data_idx
-                was_straight = 1
-                curve_list = []
-            elif was_straight:
-                # We are still in a straight line
-                pass
-    
-    # save last straight line to new_path
-    link = Link(graph.links[start_idx].tail, graph.links[-1].head)
-    new_path.append([link])
-                
-    return new_path
-
-def control_point(rover, start_point, end_point):
-    # graph: the graph of the path
+def control_point(rover, q0, q0_dot, qf, dt, k_v = None, k_h = None):
     # rover: the rover object
-    #  
-    a =1 
-def control_rect(rover, start_point, end_point):
+    # q_start: the starting point of the link (x,y, theta)
+    # q_end: the final point of the link (x, y, 0)
+    # q_start_dot: the starting velocity of the link (x_dot, y_dot)
+    # q_end_dot: the final velocity of the link (x_dot, y_dot)
+
+    ''' With a timestep dt we can achieve a spatial accuracy of at worse
+        v_max * dt, where v_max is the maximum velocity of the rover.
+        So we need to make sure that the distance accuracy is within 
+        the desired threshold.
+    '''
+    if k_v is None:
+        k_v = 0.08
+    if k_h is None:
+        k_h = 0.4
+    
+    q = []
+    q_dot = []
+    d = 1
+    q.append(q0)
+    q_dot.append(q0_dot)
+
+
+    
+
+    # Calculate the velocity
+    v_max = rover.vmax
+    L = rover.Laxis
+  
+
+    while d > 0.5:
+        # Calculate the distance between the two points
+        d = sqrt((qf[0] - q[-1][0])**2 + (qf[1] - q[-1][1])**2)
+        
+
+        v = k_v * d
+        h = atan2(qf[1] - q[-1][1], qf[0] - q[-1][0])
+        gamma = angle_mod_pi(k_h * (h - q[-1][2]))
+
+        if v > v_max:
+            v = v_max
+        x_dot = v * np.cos(q[-1][2])
+        y_dot = v * np.sin(q[-1][2])
+        theta_dot = (v/L)*tan(gamma)
+        
+        q_dot.append(np.array([x_dot, y_dot, theta_dot]))
+        # Integrate the velocity to get the position
+        q.append(integrate_step(q[-1], q_dot[-1], dt))
+    return np.stack(q), np.stack(q_dot)
+    
+
+
+
+
+
+
+
+def control_straight(rover, q0, q0_dot, qf, dt, k_h = None, k_d = None, maxiter = 1000):
     # graph: the graph of the path
     # rover: the rover object
     #
-    pos = start_point
-    v = rover.vmax
-    Kv, Kh = 0.10, 0.10 # Velocity and heading gains
-    while not np.allclose(pos, end_point):
-        d = sqrt((pos[0] - end_point[0])**2 + (pos[1] - end_point[1])**2) # Distance to the end point
-        v = Kv * d
-        # Calculate the heading
-        theta = atan2(end_point[1] - pos[1], end_point[0] - pos[0])      # should be in the range [-pi, pi]
+    # a, b, c: rectilinear path parameters  
+    # start_pose: the starting pose of the rover
+    # end_pose: the final pose of the rover (if None, the rover will stop at the end of the path)
+    
+
+    
+    if k_h is None:
+        k_h = 0.4
+    if k_d is None:
+        k_d = 0.1
+    min_dist = 99
+    
+   
+    
+    v_max = rover.vmax
+    L = rover.Laxis
 
 
-def control_pose(rover,start_point, start_theta, end_point, end_theta):
-    a =1
-          
+    q = []
+    q_dot = []
+    d = 1
+    q.append(q0)
+    q_dot.append(q0_dot)
+
+    iterator = 0
+    if (qf[0] - q0[0]) >= 0:
+        v = v_max
+    else:
+        v = -v_max
+    
+
+     # Compute a, b, c from q0 and qf
+    a = qf[1] - q0[1]
+    b = q0[0] - qf[0]
+    c = q0[1]*qf[0] - q0[0]*qf[1]
+
+    # orthogonal distance from the line 
+    while d > 0.2 and iterator < maxiter:
+        d_ort = abs(a*q[-1][0] + b*q[-1][1] + c)/sqrt(a**2 + b**2)
+        d = sqrt((qf[0] - q[-1][0])**2 + (qf[1] - q[-1][1])**2)
+        if d < min_dist:
+            min_dist = d
+
+        #v = k_v * d
+        h = atan2(-a, b)
+        gamma = angle_mod_pi(k_h * (h - q[-1][2])  - k_d * d_ort) 
+
+
+        
+        x_dot = v * np.cos(q[-1][2])
+        y_dot = v * np.sin(q[-1][2])
+        theta_dot = (v/L)*tan(gamma)
+
+        q_dot.append(np.array([x_dot, y_dot, theta_dot]))
+        # Integrate the velocity to get the position
+        q.append(integrate_step(q[-1], q_dot[-1], dt))
+        iterator += 1
+    print("min dist: ", min_dist)
+    return np.stack(q), np.stack(q_dot)
+
+
+
+
+
+def control_pose(rover,q_start, q_end, dt, k_rho = None, k_alpha = None, k_beta = None):
+    # rover: the rover object
+    # q_start: the starting point of the link (x,y, theta)
+    # q_end: the final point of the link (x, y, 0)
+    # q_start_dot: the starting velocity of the link (x_dot, y_dot)
+    # q_end_dot: the final velocity of the link (x_dot, y_dot)
+
+    ''' With a timestep dt we can achieve a spatial accuracy of at worse
+        v_max * dt, where v_max is the maximum velocity of the rover.
+        So we need to make sure that the distance accuracy is within 
+        the desired threshold.
+    '''
+    if k_alpha is None:
+        k_alpha = 8
+    if k_beta is None:
+        k_beta = -3
+    if k_rho is None:
+        k_rho = 3
+    
+    if k_rho > 0 and k_beta < 0 and k_alpha-k_rho > 0:
+        print("Stable")
+    else:
+        raise ValueError("Not stable")
+    q = []
+    q_dot = []
+
+    t = 0
+    theta_star = q_end[2] # Assumed radians
+
+    q.append(q_start)
+    q_dot.append(np.array([0, 0, 0]))
+
+    x_diff = q_end[0] - q_start[0]
+    y_diff = q_end[1] - q_start[1]
+    
+    rho = sqrt(x_diff**2 + y_diff**2)
+    while rho > 0.1:
+        x_diff = q_end[0] - q[-1][0]
+        y_diff = q_end[1] - q[-1][1]
+        
+        rho = sqrt(x_diff**2 + y_diff**2)
+        alpha = angle_mod_pi(np.arctan2(y_diff, x_diff) - q[-1][2])    
+        beta = angle_mod_pi(-q[-1][2] - alpha + theta_star)
+
+        v = k_rho * rho
+        w = k_alpha * alpha + k_beta * beta
+
+        if alpha > np.pi/2 or alpha < -np.pi/2:
+            v = -v
+        if abs(v) > rover.vmax:
+            v = np.sign(v)*rover.vmax
+        if abs(w) > rover.wmax:
+            w = np.sign(w)*rover.wmax
+        
+        
+        x_dot = v * np.cos(q[-1][2])
+        y_dot = v * np.sin(q[-1][2])
+        theta_dot = w
+        q_dot.append(np.array([x_dot, y_dot, theta_dot]))
+        # Integrate the velocity to get the position
+        q.append(integrate_step(q[-1], q_dot[-1], dt))
+        t += dt
+    return np.stack(q), np.stack(q_dot), t
+    
+
         
 
         
 
             
 
-        
-
-
+def integrate_step(value0:np.ndarray, value0_dot:np.ndarray, dt):
+    # Integrate a value with respect to time
+    return value0 + value0_dot * dt
