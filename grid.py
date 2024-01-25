@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 class Grid:
-    def __init__(self, *, xlim=10000, ylim=10000, corner = 'ul', res = 10, 
+    def __init__(self, *, xlim=0, ylim=0, corner = 'ul', res = 1, 
                  image: np.ndarray = None, obstacle: np.ndarray = None, landmarks:tuple = None):
         # Initialize the attributes of the Grid class
         # xlim: x limit of the grid
@@ -21,7 +21,6 @@ class Grid:
         self.jlim = int(xlim/res)
         self.landmarks = landmarks
 
-
         self.corner = corner
         self.res = res
         self.image = image
@@ -29,17 +28,13 @@ class Grid:
         
         # Initialize the grid
         self.X = tuple(np.arange(0, xlim, res))
-        self.Y = tuple(np.arange(0, ylim, res))\
+        self.Y = tuple(np.arange(0, ylim, res))
+
+        self.x_off = 0
+        self.y_off = 0
         
-        if image is not None and obstacle is not None:
-            # Build map from image superimposing obstacles for display purposes
-            self.map = self.image.copy()
-            for i in range(self.ilim):
-                for j in range(self.jlim):
-                    if self.obstacle[i][j] == 255:
-                        self.map[i][j] = 255
-        elif image is not None:
-            self.map = self.image
+        self.map = image
+        self.obstacle = obstacle
 
         if corner == 'ul':
             # Do nothing, we're good to go
@@ -136,17 +131,38 @@ class Grid:
             i_start, i_end = i_end, i_start
         if j_start > j_end:
             j_start, j_end = j_end, j_start
+        sub_image = self.image[ i_start:i_end, j_start:j_end]
+        sub_obst = self.obstacle[ i_start:i_end, j_start:j_end]
         
-
-        # Get the submap
-        submap = self.map[ i_start:i_end, j_start:j_end]
-        return submap
+        subgrid = Grid(xlim = x_end - x_start, ylim = y_end - y_start, corner = self.corner, res = self.res, image = sub_image, obstacle = sub_obst)
+        subgrid.x_off = x_start
+        subgrid.y_off = y_start
+        return subgrid
 
           
     def plot(self):
         # Plot the grid
-        plt.imshow(self.map, cmap='gray')
+        plt.imshow(np.flipud(self.map), cmap='gray')
         plt.gca().invert_yaxis()
+        plt.gca().set_aspect('equal')
+        # We are displaying an image, remove the axis ticks
+        # Set the x and y ticks
+        plt.xticks([])
+        plt.yticks([])
+
+    def plot_on(self, array: np.ndarray):
+        # Plot the array on the grid
+        plt.imshow(np.flipud(array), cmap='gray')
+        plt.gca().invert_yaxis()
+        plt.gca().set_aspect('equal')
+
+        # Set the x and y ticks
+        plt.xticks([])
+        plt.yticks([])
+
+        plt.plot(array[:,0]/self.res - self.x_off/self.res, 
+                 array[:,1]/self.res - self.y_off/self.res, 'r-')
+
 
 
 

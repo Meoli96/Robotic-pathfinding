@@ -80,10 +80,20 @@ def list_np_angle(array: np.ndarray):
     # return the list in degrees between 0 and 360 of the angles in array
     return [angle_mod_2pi(angle) * 180 / np.pi for angle in array]
 
-def cost_array(array: np.ndarray):
+def cost_path(array: np.ndarray):
     # return the cost of the array
     cost = 0
     for i in range(len(array) - 1):
         cost += np.linalg.norm(array[i+1] - array[i])
     return cost
+
+def map_obstacle(map, obstacle):
+    # Return a map with the obstacle superimposed
+    map = map.copy()
+    for i in range(map.shape[0]):
+        for j in range(map.shape[1]):
+            if obstacle[i][j] == 255:
+                map[i][j] = 255
+    return map
+
     

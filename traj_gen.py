@@ -171,7 +171,8 @@ def control_pose(rover,q_start, q_end, dt, k_rho = None, k_alpha = None, k_beta 
         k_rho = 3
     
     if k_rho > 0 and k_beta < 0 and k_alpha-k_rho > 0:
-        print("Stable")
+        print("Stable: k_rho, k_alpha, k_beta = (" + 
+              str(k_rho)+ ", " +  str(k_alpha) + ", " + str(k_beta) + ")")
     else:
         raise ValueError("Not stable")
     q = []
