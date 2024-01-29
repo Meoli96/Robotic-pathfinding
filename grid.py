@@ -94,10 +94,9 @@ class Grid:
         else:
             return [n for n in neighbors if self.boundary_check(n[0], n[1])]
 
+    
+    
     def get_submap(self, x_start, x_end, y_start, y_end):
-
-   
-
         # Check if the points are inside the boundary
         if not self.boundary_check(x_start, y_start) or not self.boundary_check(x_end, y_end):
             # Who is the offender?
@@ -133,11 +132,26 @@ class Grid:
             j_start, j_end = j_end, j_start
         sub_image = self.image[ i_start:i_end, j_start:j_end]
         sub_obst = self.obstacle[ i_start:i_end, j_start:j_end]
+        # get grid landmarks within the submap
+        sub_landmarks = []
+        for landmark in self.landmarks:
+            if landmark[0] >= x_start and landmark[0] <= x_end and landmark[1] >= y_start and landmark[1] <= y_end:
+                sub_landmarks.append(landmark)
         
-        subgrid = Grid(xlim = x_end - x_start, ylim = y_end - y_start, corner = self.corner, res = self.res, image = sub_image, obstacle = sub_obst)
+        subgrid = Grid(xlim = x_end - x_start, ylim = y_end - y_start, corner = self.corner,landmarks=sub_landmarks, res = self.res, image = sub_image, obstacle = sub_obst)
         subgrid.x_off = x_start
         subgrid.y_off = y_start
         return subgrid
+    
+    def submap_path(self, path):
+        # path: a list of points (x, y)
+        # Compute the submap containing the path
+        x_start = min(path, key = lambda x: x[0])[0] + 100
+        x_end = max(path, key = lambda x: x[0])[0] + 100
+        y_start = min(path, key = lambda x: x[1])[1] + 100
+        y_end = max(path, key = lambda x: x[1])[1] + 100
+        return self.get_submap(x_start, x_end, y_start, y_end)
+
 
           
     def plot(self):
@@ -150,18 +164,26 @@ class Grid:
         plt.xticks([])
         plt.yticks([])
 
-    def plot_on(self, array: np.ndarray):
+    def plot_on(self, q, *args):
         # Plot the array on the grid
-        plt.imshow(np.flipud(array), cmap='gray')
-        plt.gca().invert_yaxis()
-        plt.gca().set_aspect('equal')
+        ### DOESNT WORK YET
+        if isinstance(q, np.ndarray):
+            pass
+        elif isinstance(q, list):
+            q = np.array(q)
+        elif  isinstance(q, tuple):
+            q = np.array(q)
 
-        # Set the x and y ticks
-        plt.xticks([])
-        plt.yticks([])
+        if q.shape[0] != 2:
+            if q.shape[1] == 2:
+                q = q.T
+            else:
+                raise ValueError('Invalid shape of the array to plot')
+        
+        # Plot the array
+        plt.plot((q[0,:]-self.x_off)/self.res, (q[1,:]-self.y_off)/self.res, *args)
 
-        plt.plot(array[:,0]/self.res - self.x_off/self.res, 
-                 array[:,1]/self.res - self.y_off/self.res, 'r-')
+      
 
 
 
@@ -183,5 +205,29 @@ class Grid:
         if i < 0 or i >= self.ilim or j < 0 or j >= self.jlim:
             raise ValueError('Index out of range')
         return (self.X[j], self.Y[i])
+    
+    # This method should be part of a Trajectory class or Rover class,
+    # but it's here for now
+    def find_landmark(self, q, range_max):
+        # q: robot pose
+        # range_max: maximum range of the lidar
+        # return: a list of the coordinates of the landmarks in the map
+        r_landmarks = []
         
+        r_dt = [] 
+
+        for landmark in self.landmarks:
+            # Check if the landmark is in the range of the sensor
+            dist = np.linalg.norm(q[:2] - landmark)
+            # compute the angle between the robot and the landmark
+           
+            if dist < range_max:
+                r_landmarks.append(landmark)
+        return r_landmarks
+
+
+
+    
+
+
 

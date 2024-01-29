@@ -1,6 +1,6 @@
 # file for utility functions used in the project
 import numpy as np
-
+from grid import *
 from graph import *
 
 
@@ -96,4 +96,14 @@ def map_obstacle(map, obstacle):
                 map[i][j] = 255
     return map
 
-    
+def obsv_landmark(pos, landmark):
+    # Return obserbables computed from pos and landmark
+    # pos: robot pose
+    # landmark: landmark position
+
+    # Compute the distance between the robot and the landmark
+    dist = np.linalg.norm(pos[:2] - landmark)
+    # compute the angle between the robot and the landmark
+    angle = np.arctan2(landmark[1] - pos[1], landmark[0] - pos[0]) - pos[2]
+
+    return np.array([dist, angle])  

@@ -4,6 +4,8 @@ class Rover:
         self.vmax = vmax
         self.Laxis = Laxis
         self.wmax = vmax / Laxis
+
+    
         
 
     
