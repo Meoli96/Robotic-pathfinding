@@ -104,6 +104,7 @@ def obsv_landmark(pos, landmark):
     # Compute the distance between the robot and the landmark
     dist = np.linalg.norm(pos[:2] - landmark)
     # compute the angle between the robot and the landmark
-    angle = np.arctan2(landmark[1] - pos[1], landmark[0] - pos[0]) - pos[2]
+
+    angle = angle_mod_pi(np.arctan2(landmark[1] - pos[1], landmark[0] - pos[0]) - pos[2])
 
     return np.array([dist, angle])  

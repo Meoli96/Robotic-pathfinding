@@ -14,7 +14,7 @@ def simulate_odo(q1, q2):
     """
     # Compute perfect measure
     dd = np.linalg.norm(q2[:2] - q1[:2])
-    dphi = q2[2] - q1[2]
+    dphi = angle_mod_pi(q2[2] - q1[2])
     
     # Return measure
     return [dd, dphi]
@@ -107,9 +107,11 @@ def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lid
     M = real_traj.shape[0]
     P_arr = np.zeros((M, n, n))
     P_arr[0] = P0
+    k_old = np.zeros((3,2))
 
     # Iterate
     for i in range(len(real_traj) - 1): # just because we have a trajectory integrated with a the same frequency of the measurements
+        
         # Simulate perfect odometry with real trajectory
         [d_d, d_phi] = simulate_odo(real_traj[i], real_traj[i +1])
         # Compute F_q and F_v
@@ -124,6 +126,7 @@ def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lid
             [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), d_phi]) 
         P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ np.diag([sigma_d**2, sigma_phi**2]) @ F_v_.T
         
+        
 
         # Check if there is any landmark in the range of the sensor
         r_lm  = grid.find_landmark(real_traj[i+1], lidar_range) # 500 m range
@@ -131,24 +134,25 @@ def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lid
         if r_lm != []:
             # landmarks detected
             # for each landmark, compute H_q and H_v
+            if not np.isfinite(q_hat[i+1][2]):
+                print("q_hat[2] is not finite")
+                print(q_hat[i+1])
+                raise ValueError
             for i_lm in range(len(r_lm)):
                 # get the index of the landmark
 
-                H_q_ = Hq(q_hat[i+1], r_lm[i_lm])
-                H_v_ = Hv(q_hat[i+1], r_lm[i_lm])
+                H_q_ = Hq(real_traj[i+1], r_lm[i_lm])
+                H_v_ = Hv(real_traj[i+1], r_lm[i_lm])
                 z_nl = obsv_landmark(real_traj[i+1], r_lm[i_lm]) # z_noiseless -- observed from real state
                 z = add_noise(z_nl, [sigma_r, sigma_theta])
 
+                
+
                 # Compute Kalman gain
                 K = P_arr[i+1] @ H_q_.T @ np.linalg.inv(H_q_ @ P_arr[i+1] @ H_q_.T + H_v_ @ np.diag([sigma_r**2, sigma_theta**2]) @ H_v_.T)
-                
+                k_old = K
                 h_q = obsv_landmark(q_hat[i+1], r_lm[i_lm]) # h_q -- observed from estimated state
                 # Update q_hat and P
                 q_hat[i+1] = q_hat[i+1] + K @ (z  - h_q)
                 P_arr[i+1] = (np.eye(n) - K @ H_q_) @ P_arr[i]
-    return q_hat, P_arr
-            
-
-    
-
 
