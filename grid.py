@@ -55,6 +55,10 @@ class Grid:
     def boundary_check(self, x, y):
         return x >= 0 and x <= self.xlim and y >= 0 and y <= self.ylim # True if the point is in the boundary, False otherwise
     
+    def boundary_check_path(self, path):
+        # Return True if all the points in the path are in the boundary, False otherwise
+        return all([self.boundary_check(x, y) for x, y in path])
+    
     def obstacle_check(self, x, y):
         # x: x coordinate
         # y: y coordinate
@@ -143,15 +147,32 @@ class Grid:
         subgrid.y_off = y_start
         return subgrid
     
-    def submap_path(self, path):
-        # path: a list of points (x, y)
-        # Compute the submap containing the path
-        x_start = min(path, key = lambda x: x[0])[0] + 100
-        x_end = max(path, key = lambda x: x[0])[0] + 100
-        y_start = min(path, key = lambda x: x[1])[1] + 100
-        y_end = max(path, key = lambda x: x[1])[1] + 100
-        return self.get_submap(x_start, x_end, y_start, y_end)
+    def submap_path(self, path_list):
+        # path_list: a list of paths (array of points)
+        # return: a submap containing all the paths
 
+        # Be sure that all paths are within the boundary of the main map
+        for path in path_list:
+            if not self.boundary_check_path(path):
+                raise ValueError('Path out of boundary')
+        
+        # Now compute x_start, x_end, y_start, y_end from every path
+            x_start = 0 
+            x_end = self.x_end
+            y_start = 0
+            y_end = self.y_end
+        # I need:
+            # Minimum x coordinate from all paths
+            # Maximum x coordinate from all paths
+            # Minimum y coordinate from all paths
+            # Maximum y coordinate from all paths
+        x_start = min([min(path[:,0]) for path in path_list])
+        x_end = max([max(path[:,0]) for path in path_list])
+        y_start = min([min(path[:,1]) for path in path_list])
+        y_end = max([max(path[:,1]) for path in path_list])
+        
+       
+        return self.get_submap(x_start, x_end, y_start, y_end)
 
           
     def plot(self):
@@ -164,22 +185,19 @@ class Grid:
         plt.xticks([])
         plt.yticks([])
 
-    def plot_on(self, q, *args):
-        # Plot the array on the grid
-        ### DOESNT WORK YET
-        if isinstance(q, np.ndarray):
-            pass
-        elif isinstance(q, list):
-            q = np.array(q)
-        elif  isinstance(q, tuple):
-            q = np.array(q)
+    def plot_on(self, q, *args, submap = False, landmarks = False):
 
-        if q.shape[0] != 2:
-            if q.shape[1] == 2:
-                q = q.T
-            else:
-                raise ValueError('Invalid shape of the array to plot')
+        # Plot the array on the grid
+        # If submap is True, plot the array on a submap containing q
+        # If landmarks is True, plot the landmarks
         
+        # q can be:
+        # - a point (x, y) -- list of points
+        # - a path (array of points) -- list of paths
+       
+        
+
+
         # Plot the array
         plt.plot((q[0,:]-self.x_off)/self.res, (q[1,:]-self.y_off)/self.res, *args)
 

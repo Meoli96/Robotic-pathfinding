@@ -158,11 +158,6 @@ def control_pose(rover,q_start, q_end, dt, k_rho = None, k_alpha = None, k_beta 
     # q_start_dot: the starting velocity of the link (x_dot, y_dot)
     # q_end_dot: the final velocity of the link (x_dot, y_dot)
 
-    ''' With a timestep dt we can achieve a spatial accuracy of at worse
-        v_max * dt, where v_max is the maximum velocity of the rover.
-        So we need to make sure that the distance accuracy is within 
-        the desired threshold.
-    '''
     if k_alpha is None:
         k_alpha = 8
     if k_beta is None:

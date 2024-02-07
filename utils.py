@@ -108,3 +108,29 @@ def obsv_landmark(pos, landmark):
     angle = angle_mod_pi(np.arctan2(landmark[1] - pos[1], landmark[0] - pos[0]) - pos[2])
 
     return np.array([dist, angle])  
+
+from matplotlib.patches import Ellipse
+
+def error_ellipse(ax, xc, yc, cov, sigma=1, **kwargs):
+    '''
+    Plot an error ellipse contour over your data.
+    Inputs:
+    ax : matplotlib Axes() object
+    xc : x-coordinate of ellipse center
+    yc : x-coordinate of ellipse center
+    cov : covariance matrix
+    sigma : # sigma to plot (default 1)
+    additional kwargs passed to matplotlib.patches.Ellipse()
+    '''
+    w, v = np.linalg.eigh(cov) # assumes symmetric matrix
+    order = w.argsort()[::-1]
+    w, v = w[order], v[:,order]
+    theta = np.degrees(np.arctan2(*v[:,0][::-1]))
+    ellipse = Ellipse(xy=(xc,yc),
+                    width=2.*sigma*np.sqrt(w[0]),
+                    height=2.*sigma*np.sqrt(w[1]),
+                    angle=theta, **kwargs)
+    ellipse.set_facecolor('none')
+    return ellipse
+
+    
