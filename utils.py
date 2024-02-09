@@ -105,13 +105,13 @@ def obsv_landmark(pos, landmark):
     dist = np.linalg.norm(pos[:2] - landmark)
     # compute the angle between the robot and the landmark
 
-    angle = angle_mod_pi(np.arctan2(landmark[1] - pos[1], landmark[0] - pos[0]) - pos[2])
+    angle = angle_mod_2pi(np.arctan2(landmark[1] - pos[1], landmark[0] - pos[0]) - pos[2])
 
     return np.array([dist, angle])  
 
 from matplotlib.patches import Ellipse
 
-def error_ellipse(ax, xc, yc, cov, sigma=1, **kwargs):
+def error_ellipse(xc, yc, cov, sigma=1, **kwargs):
     '''
     Plot an error ellipse contour over your data.
     Inputs:
@@ -134,3 +134,92 @@ def error_ellipse(ax, xc, yc, cov, sigma=1, **kwargs):
     return ellipse
 
     
+
+
+
+
+### Python notebook utils functions
+    
+def plot_angle_and_rate(q, qd):
+    theta_plot =  list_np_angle(q[:,2])
+    theta_dot_plot = np.unwrap(qd[:,2])
+    
+    plt.figure()
+    plt.subplot(2,1,1)
+    plt.ylabel(r'$\theta$' + "°")
+    plt.plot(theta_plot, 'b-')
+    plt.subplot(2,1,2)
+    plt.ylabel(r'$\dot{\theta}$' + " rad/s")
+    plt.xlabel("t (s)")
+    plt.plot(theta_dot_plot, 'r-')
+    plt.show()
+
+    
+def plot_velocity(qd):
+    # Plot the velocity of the robot
+    # plot velocity module
+    plt.figure()
+    plt.plot(np.sqrt(qd[:,0]**2 + qd[:,1]**2))
+    plt.ylabel(r'$v$' + " m/s")
+    plt.xlabel("t (s)")  
+    # plot velocity components
+    plt.figure()
+    plt.subplot(2,1,1)
+    plt.ylabel(r'$v_x$' + " m/s")
+    plt.plot(qd[:,0], 'b-')
+    plt.subplot(2,1,2)
+    plt.ylabel(r'$v_y$' + " m/s")
+    plt.xlabel("t (s)")
+    plt.plot(qd[:,1], 'r-')
+
+
+def astar_md():
+    # Print A* algorithm definition in markdown
+    mdstr = """
+```
+def AStar(grid, x0, x_target):
+    # Initialization
+
+    open_set = PriorityQueue()
+    cameFrom = {}
+    
+    gScore = defaultdict(lambda: float('inf')) # If value not in dict, return inf
+    gScore[x0] = 0
+    fScore = defaultdict(lambda: float('inf'))
+    fScore[x0] = h_oct(x0, x_target)
+    open_set.put((fScore[x0], h_oct(x0, x_target), x0))
+
+    while not open_set.empty(): 
+        
+        current = open_set.get()[2] # get only the position tuple
+        if current == x_target:
+            # return the path and the cost
+            return reconstruct_path(cameFrom, current), gScore[current]
+       
+        # compute neighbors of current -- deletes points outside of boundary or inside obstacle
+        cur_neighbors = grid.neighbors(current[0], current[1], obstacle_check=True)
+        for neighbor in cur_neighbors:
+           h_temp = h_oct(neighbor, x_target)
+           tentative_gScore = gScore[current] + cost(current, neighbor)
+           tentative_fScore = tentative_gScore + h_temp
+           if tentative_fScore < fScore[neighbor]:
+                cameFrom[neighbor] = current
+                gScore[neighbor] = tentative_gScore
+                fScore[neighbor] = tentative_fScore
+                open_set.put((fScore[neighbor], h_temp, neighbor))
+```
+"""
+    return mdstr
+
+def test_md():
+    mdstr="""
+Hello, this should just be a paragraph, and there should be a test of Markdown fenced code block with backticks:
+
+```
+
+Hello there
+This should be in
+a code block
+```
+"""
+    return mdstr

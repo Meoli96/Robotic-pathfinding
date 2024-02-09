@@ -175,7 +175,7 @@ class Grid:
         return self.get_submap(x_start, x_end, y_start, y_end)
 
           
-    def plot(self):
+    def plot(self, landmarks = False, landmarks_color = 'ro'):
         # Plot the grid
         plt.imshow(np.flipud(self.map), cmap='gray')
         plt.gca().invert_yaxis()
@@ -184,6 +184,12 @@ class Grid:
         # Set the x and y ticks
         plt.xticks([])
         plt.yticks([])
+        if landmarks:
+            for landmark in self.landmarks:
+                plt.plot((landmark[0]-self.x_off)/self.res, 
+                         (landmark[1]-self.y_off)/self.res, 
+                         landmarks_color, markerfacecolor='none', 
+                         alpha = 0.5)
 
     def plot_on(self, q, *args, submap = False, landmarks = False):
 
@@ -192,14 +198,26 @@ class Grid:
         # If landmarks is True, plot the landmarks
         
         # q can be:
-        # - a point (x, y) -- list of points
-        # - a path (array of points) -- list of paths
-       
-        
+        # - a point (x, y) -- list of points or a single point
+        # - a path (array of points) -- list of paths or a single path
 
+        # First asses if q is a list or a single item
+        if isinstance(q, list):
+            # q is a list
+            if submap:
+                # compute submap containing anyting in q
 
-        # Plot the array
-        plt.plot((q[0,:]-self.x_off)/self.res, (q[1,:]-self.y_off)/self.res, *args)
+                
+            for q_i in q:
+                if isinstance(q_i, np.ndarray):
+                    # q_i is a path
+                    if submap:
+                        submap = self.submap_path(q)
+                        submap.plot(landmarks = landmarks)
+                        plt.plot((q_i[:,0]-submap.x_off)/submap.res, (q_i[:,1]-submap.y_off)/submap.res, *args)
+                    else:
+                        plt.plot((q_i[:,0]-self.x_off)/self.res, (q_i[:,1]-self.y_off)/self.res, *args)
+                self.plot_on(q_i, *args, submap = submap, landmarks = landmarks)
 
       
 

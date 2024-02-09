@@ -51,7 +51,8 @@ def Hq(q, t_lm: tuple):
 
 def Hv(q, t_lm: tuple):
     return np.eye(2)
-
+def odometry_step(q, u, sigma_d, sigma_phi):
+    a = np.random.normal(0, sigma_d)
 
 def dead_recon(real_traj, P0, sigma_d, sigma_phi):
     """Dead reckoning algorithm
@@ -111,7 +112,7 @@ def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lid
 
     # Iterate
     for i in range(len(real_traj) - 1): # just because we have a trajectory integrated with a the same frequency of the measurements
-        
+        ### Predict step
         # Simulate perfect odometry with real trajectory
         [d_d, d_phi] = simulate_odo(real_traj[i], real_traj[i +1])
         # Compute F_q and F_v
@@ -143,14 +144,18 @@ def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lid
                 # get the index of the landmark
                 H_q_ = Hq(q_hat[i+1], r_lm[i_lm])
                 H_v_ = Hv(q_hat[i+1], r_lm[i_lm])
-                z_nl = obsv_landmark(real_traj[i+1], r_lm[i_lm]) # z_noiseless -- observed from real state
-                z = add_noise(z_nl, [sigma_r, sigma_theta])
+                z_nq = obsv_landmark(real_traj[i+1], r_lm[i_lm]) # z_nq -- observed from real state (noiseless)
+                h_nq = obsv_landmark(q_hat[i+1], r_lm[i_lm]) # h_nq -- observed from estimated state (noiseless)
+
+                z_q = add_noise(z_nq, [sigma_r, sigma_theta])
+                h_q = add_noise(h_nq, [sigma_r, sigma_theta])
+
                 # Compute Kalman gain                
                 K = P_arr[i+1] @ H_q_.T @ np.linalg.inv(H_q_ @ P_arr[i+1] @ H_q_.T + H_v_ @ np.diag([sigma_r**2, sigma_theta**2]) @ H_v_.T)
 
-                h_q = obsv_landmark(q_hat[i+1], r_lm[i_lm]) # h_q -- observed from estimated state
+                
                 # Update q_hat and P
-                q_hat[i+1] = q_hat[i+1] + K @ (z - h_q)
+                q_hat[i+1] = q_hat[i+1] + K @ (z_q - h_q)
                 P_arr[i+1] = (np.eye(n) - K @ H_q_) @ P_arr[i+1]
     return q_hat, P_arr, 
 

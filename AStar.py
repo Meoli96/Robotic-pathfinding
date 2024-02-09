@@ -2,7 +2,24 @@
     auxiliary functions.
 '''
 from math import sqrt
+import numpy as np
+from utils import cost_path
 
+class path:
+    def __init__(self, np_array: np.ndarray = None, plotArgs = None):
+        self.path = np_array
+        self.n = np_array.shape[0]
+        self.cost = cost_path(np_array)
+        self.plotArgs = plotArgs
+
+
+    def set_path(self, np_array: np.ndarray):
+        self.path = np_array
+        self.n = np_array.shape[0]
+        self.cost = cost_path(np_array)
+    
+    def set_plotArgs(self, plotArgs):
+        self.plotArgs = plotArgs
 
 
 def cost(coord1, coord2):
@@ -35,9 +52,13 @@ def reconstruct_path(cameFrom, current):
     return total_path
     
 
+
+
+
+
 from queue import PriorityQueue
 from collections import defaultdict
-def AStar(grid, x0, x_target, theta0 = None, theta_target = None):
+def AStar(grid, x0, x_target):
     # x0:
     # x_target:
     # return: path, cost
@@ -57,24 +78,22 @@ def AStar(grid, x0, x_target, theta0 = None, theta_target = None):
     open_set.put((fScore[x0], h_oct(x0, x_target), x0))
 
     while not open_set.empty(): 
-        current = open_set.get()[2] # get only the tuple
         
+        current = open_set.get()[2] # get only the position tuple
         if current == x_target:
             # return the path and the cost
             return reconstruct_path(cameFrom, current), gScore[current]
-        # compute neighbors of current_node -- deletes points outside of boundary or inside obstacle
+       
+        # compute neighbors of current -- deletes points outside of boundary or inside obstacle
         cur_neighbors = grid.neighbors(current[0], current[1], obstacle_check=True)
         for neighbor in cur_neighbors:
+           h_temp = h_oct(neighbor, x_target)
            tentative_gScore = gScore[current] + cost(current, neighbor)
-           tentative_fScore = tentative_gScore + h_oct(neighbor, x_target)
+           tentative_fScore = tentative_gScore + h_temp
            if tentative_fScore < fScore[neighbor]:
                 cameFrom[neighbor] = current
                 gScore[neighbor] = tentative_gScore
                 fScore[neighbor] = tentative_fScore
-                open_set.put((fScore[neighbor], h_oct(neighbor,x_target), neighbor))
-
-
-
-
+                open_set.put((fScore[neighbor], h_temp, neighbor))
 
 
