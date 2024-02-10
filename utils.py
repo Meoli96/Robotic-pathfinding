@@ -173,53 +173,21 @@ def plot_velocity(qd):
     plt.plot(qd[:,1], 'r-')
 
 
-def astar_md():
-    # Print A* algorithm definition in markdown
-    mdstr = """
-```
-def AStar(grid, x0, x_target):
-    # Initialization
+def plot_detP(Pmatrix: np.ndarray):
+    # Plot the diagonal of the covariance matrix
+    plt.figure()
+    plt.ylabel("det(P)")
+    det_p = np.zeros(len(Pmatrix))
+    for i in range(len(Pmatrix)):
+        det_p[i] = np.sqrt(np.linalg.det(Pmatrix[i]))
+    plt.plot(det_p)
+    plt.xlabel("t (s)")
+    plt.show()
 
-    open_set = PriorityQueue()
-    cameFrom = {}
-    
-    gScore = defaultdict(lambda: float('inf')) # If value not in dict, return inf
-    gScore[x0] = 0
-    fScore = defaultdict(lambda: float('inf'))
-    fScore[x0] = h_oct(x0, x_target)
-    open_set.put((fScore[x0], h_oct(x0, x_target), x0))
-
-    while not open_set.empty(): 
-        
-        current = open_set.get()[2] # get only the position tuple
-        if current == x_target:
-            # return the path and the cost
-            return reconstruct_path(cameFrom, current), gScore[current]
-       
-        # compute neighbors of current -- deletes points outside of boundary or inside obstacle
-        cur_neighbors = grid.neighbors(current[0], current[1], obstacle_check=True)
-        for neighbor in cur_neighbors:
-           h_temp = h_oct(neighbor, x_target)
-           tentative_gScore = gScore[current] + cost(current, neighbor)
-           tentative_fScore = tentative_gScore + h_temp
-           if tentative_fScore < fScore[neighbor]:
-                cameFrom[neighbor] = current
-                gScore[neighbor] = tentative_gScore
-                fScore[neighbor] = tentative_fScore
-                open_set.put((fScore[neighbor], h_temp, neighbor))
-```
-"""
-    return mdstr
-
-def test_md():
-    mdstr="""
-Hello, this should just be a paragraph, and there should be a test of Markdown fenced code block with backticks:
-
-```
-
-Hello there
-This should be in
-a code block
-```
-"""
-    return mdstr
+def plot_error(real, estimated):
+    # Plot the error between real and estimated
+    plt.figure()
+    plt.plot(real - estimated)
+    plt.ylabel("error")
+    plt.xlabel("t (s)")
+    plt.show()

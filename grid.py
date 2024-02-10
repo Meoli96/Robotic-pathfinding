@@ -166,30 +166,16 @@ class Grid:
         # Be sure that all paths are within the boundary of the main map
         if isinstance(path_list, list):
             # path_list is a list of paths and points
-            for path in path_list:
-                if not self.boundary_check(path):
-                    raise ValueError('Out of boundary')
-                if len(path.shape) == 1:
-                    # path is a single point
-                    x_start = path[0]
-                    x_end = path[0]
-                    y_start = path[1]
-                    y_end = path[1]
-                else:
-                    # path is an array of points
-                    x_start = min(path[:,0])
-                    x_end = max(path[:,0])
-                    y_start = min(path[:,1])
-                    y_end = max(path[:,1])
-                # Update the submap boundaries
-                if x_start > x_start_r:
-                    x_start_r = x_start
-                if x_end < x_end_r:
-                    x_end_r = x_end
-                if y_start > y_start_r:
-                    y_start_r = y_start
-                if y_end < y_end_r:
-                    y_end_r = y_end
+            # Concatenate all the paths and points
+            path_cat = np.vstack(path_list)
+            # Do the boundary check
+            if not self.boundary_check(path_cat):
+                raise ValueError('Out of boundary')
+            x_start = min(path_cat[:,0])
+            x_end = max(path_cat[:,0])
+            y_start = min(path_cat[:,1])
+            y_end = max(path_cat[:,1])
+
         else:
             # path_list is a single path
             # Check if we have an array or a single point 
@@ -261,17 +247,22 @@ class Grid:
                     else:
                         plt.plot((q_p.pos[0]-self.x_off)/self.res, 
                                  (q_p.pos[1]-self.y_off)/self.res, q_p.plotArgs)
-
-                
         else:
             # q is a single element
-              if q.n > 1:
-                  plt.plot((q.pos[:,0]-self.x_off)/self.res, 
-                                 (q.pos[:,1]-self.y_off)/self.res, q.plotArgs)
+              if submap:
+                    # compute submap containing q and call plot_on on the submap
+                    submap = self.submap_path(q.pos)
+                    submap.plot_on(q, submap=False, landmarks = landmarks)
               else:
-                   plt.plot((q.pos[0]-self.x_off)/self.res, 
+                    # plot grid
+                    self.plot(landmarks = landmarks)
+                    # plot q -- Path object
+                    if q.n > 1:
+                        plt.plot((q.pos[:,0]-self.x_off)/self.res, 
+                                 (q.pos[:,1]-self.y_off)/self.res, q.plotArgs)
+                    else: 
+                        plt.plot((q.pos[0]-self.x_off)/self.res, 
                                  (q.pos[1]-self.y_off)/self.res, q.plotArgs)
-                   
         plt.show()
 
       
