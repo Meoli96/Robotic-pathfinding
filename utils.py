@@ -1,6 +1,6 @@
 # file for utility functions used in the project
 import numpy as np
-from grid import *
+import matplotlib.pyplot as plt
 from graph import *
 
 

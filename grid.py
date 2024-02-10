@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from path import Path
+from utils import error_ellipse
 class Grid:
     def __init__(self, *, xlim=0, ylim=0, corner = 'ul', res = 1, 
                  image: np.ndarray = None, obstacle: np.ndarray = None, 
@@ -188,7 +188,7 @@ class Grid:
                 y_start = path_list[1]
                 y_end = path_list[1]
             else:
-                # path_list is an array of points
+                # path_list is an np_array
                  x_start = min(path_list[:,0])
                  x_end = max(path_list[:,0])
                  y_start = min(path_list[:,1])
@@ -219,50 +219,78 @@ class Grid:
                          self.landmarks_color, markerfacecolor='none', 
                          alpha = 0.5)
 
-    def plot_on(self, q, *args, submap = False, landmarks = False):
+    def plot_on(self, path, *args, submap = False, 
+                landmarks = False, uncertainty = False,
+                spacing = 1000 ):
 
         # Plot the array on the grid
-        # If submap is True, plot the array on a submap containing q
+        # If submap is True, plot the array on a submap containing path
         # If landmarks is True, plot the landmarks
         
-        # q can be:
+        # path can be:
         # - a point (x, y) -- list of points or a single point
         # - a path (array of points) -- list of paths or a single path
-
-        # First asses if q is a list or a single item
-        if isinstance(q, list):
-            # q is a list, multiple elements
+       
+        ax = plt.gca()
+        # First asses if path is a list or a single item
+        if isinstance(path, list):
+            # path is a list, multiple elements
             if submap:
-                # compute submap containing anyting in q and call plot_on on the submap
-                submap = self.submap_path([q_p.pos for q_p in q])
-                submap.plot_on(q, submap=False, landmarks = landmarks)
+                # compute submap containing anyting in path and call plot_on on the submap
+                submap = self.submap_path([q_p.pos for q_p in path], spacing = spacing)
+                submap.plot_on(path, submap=False, landmarks = landmarks, uncertainty=uncertainty)
             else:
                 # plot grid
                 self.plot(landmarks = landmarks)
-                # plot q -- Paths objects
-                for q_p in q:
+                # plot path -- Paths objects
+                for q_p in path:
                     if q_p.n > 1:
                         plt.plot((q_p.pos[:,0]-self.x_off)/self.res, 
                                  (q_p.pos[:,1]-self.y_off)/self.res, q_p.plotArgs)
                     else:
                         plt.plot((q_p.pos[0]-self.x_off)/self.res, 
                                  (q_p.pos[1]-self.y_off)/self.res, q_p.plotArgs)
+                    if uncertainty:
+                        if q_p.pos_un is not None:
+                            for i in range(0, q_p.n, 5000):
+                                ellipse = error_ellipse((q_p.pos[i,0]-self.x_off)/self.res, 
+                                                        (q_p.pos[i,1]-self.y_off)/self.res, 
+                                                        q_p.pos_un[i])
+                                ax.add_artist(ellipse)
+                                ellipse.set_alpha(0.3)
+                                ellipse.set_facecolor('none')
+                                ellipse.set_edgecolor('r')
+                                ellipse.set_linestyle('--')
+                                                            
+                            
+
         else:
-            # q is a single element
+            # path is a single element
               if submap:
-                    # compute submap containing q and call plot_on on the submap
-                    submap = self.submap_path(q.pos)
-                    submap.plot_on(q, submap=False, landmarks = landmarks)
+                    # compute submap containing path and call plot_on on the submap
+                    submap = self.submap_path(path.pos)
+                    submap.plot_on(path, submap=False, landmarks = landmarks, uncertainty=uncertainty)
               else:
                     # plot grid
                     self.plot(landmarks = landmarks)
-                    # plot q -- Path object
-                    if q.n > 1:
-                        plt.plot((q.pos[:,0]-self.x_off)/self.res, 
-                                 (q.pos[:,1]-self.y_off)/self.res, q.plotArgs)
+                    # plot path -- Path object
+                    if path.n > 1:
+                        plt.plot((path.pos[:,0]-self.x_off)/self.res, 
+                                 (path.pos[:,1]-self.y_off)/self.res, path.plotArgs)
                     else: 
-                        plt.plot((q.pos[0]-self.x_off)/self.res, 
-                                 (q.pos[1]-self.y_off)/self.res, q.plotArgs)
+                        plt.plot((path.pos[0]-self.x_off)/self.res, 
+                                 (path.pos[1]-self.y_off)/self.res, path.plotArgs)
+                    if uncertainty:
+                        if path.pos_un is not None:
+                            for i in range(0, path.n, 5000):
+                                ellipse = error_ellipse((path.pos[i,0]-self.x_off)/self.res, 
+                                                        (path.pos[i,1]-self.y_off)/self.res, 
+                                                        path.pos_un[i])
+                                ax.add_artist(ellipse)
+                                ellipse.set_alpha(0.3)
+                                ellipse.set_facecolor('none')
+                                ellipse.set_edgecolor('r')
+                                ellipse.set_linestyle('--')
         plt.show()
 
       

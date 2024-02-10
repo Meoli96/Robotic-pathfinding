@@ -2,6 +2,7 @@ import numpy as np
 from math import sqrt, atan2, pi, tan
 from graph import *
 from utils import *
+from grid import Grid
 
 def simulate_odo(q1, q2):
     """Simulate odometry measurements from two poses
