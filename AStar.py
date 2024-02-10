@@ -5,21 +5,6 @@ from math import sqrt
 import numpy as np
 from utils import cost_path
 
-class path:
-    def __init__(self, np_array: np.ndarray = None, plotArgs = None):
-        self.path = np_array
-        self.n = np_array.shape[0]
-        self.cost = cost_path(np_array)
-        self.plotArgs = plotArgs
-
-
-    def set_path(self, np_array: np.ndarray):
-        self.path = np_array
-        self.n = np_array.shape[0]
-        self.cost = cost_path(np_array)
-    
-    def set_plotArgs(self, plotArgs):
-        self.plotArgs = plotArgs
 
 
 def cost(coord1, coord2):

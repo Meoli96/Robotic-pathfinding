@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from path import Path
 class Grid:
     def __init__(self, *, xlim=0, ylim=0, corner = 'ul', res = 1, 
-                 image: np.ndarray = None, obstacle: np.ndarray = None, landmarks:tuple = None):
+                 image: np.ndarray = None, obstacle: np.ndarray = None, 
+                 landmarks:tuple = None, landmarks_color = 'ro' ):
         # Initialize the attributes of the Grid class
         # xlim: x limit of the grid
         # ylim: y limit of the grid
@@ -20,6 +22,7 @@ class Grid:
         self.ilim = int(ylim/res)
         self.jlim = int(xlim/res)
         self.landmarks = landmarks
+        self.landmarks_color = landmarks_color
 
         self.corner = corner
         self.res = res
@@ -52,12 +55,17 @@ class Grid:
         else:
             raise ValueError('Invalid corner value')
         
-    def boundary_check(self, x, y):
+    def _boundary_check(self, x, y):
         return x >= 0 and x <= self.xlim and y >= 0 and y <= self.ylim # True if the point is in the boundary, False otherwise
     
-    def boundary_check_path(self, path):
+    def boundary_check(self, path: np.ndarray):
+       
         # Return True if all the points in the path are in the boundary, False otherwise
-        return all([self.boundary_check(x, y) for x, y in path])
+       # Single ndarray object
+        if len(path.shape) == 1:
+            return self._boundary_check(path[0], path[1])
+        else:
+            return all([self._boundary_check(x, y) for x, y in path])
     
     def obstacle_check(self, x, y):
         # x: x coordinate
@@ -102,9 +110,9 @@ class Grid:
     
     def get_submap(self, x_start, x_end, y_start, y_end):
         # Check if the points are inside the boundary
-        if not self.boundary_check(x_start, y_start) or not self.boundary_check(x_end, y_end):
+        if not self._boundary_check(x_start, y_start) or not self._boundary_check(x_end, y_end):
             # Who is the offender?
-            if not self.boundary_check(x_start, y_start):
+            if not self._boundary_check(x_start, y_start):
                 # Again, who is the offender?
                 if x_start < 0:
                     x_start = 0
@@ -115,7 +123,7 @@ class Grid:
                 if y_start > self.ylim:
                     y_start = self.ylim
             
-            if not self.boundary_check(x_end, y_end):
+            if not self._boundary_check(x_end, y_end):
                 # Again, who is the offender?
                 if x_end < 0:
                     x_end = 0
@@ -147,35 +155,69 @@ class Grid:
         subgrid.y_off = y_start
         return subgrid
     
-    def submap_path(self, path_list):
+    def submap_path(self, path_list: np.ndarray, spacing = 1000):
         # path_list: a list of paths (array of points)
         # return: a submap containing all the paths
+        x_start_r = 0
+        x_end_r = self.xlim
+        y_start_r = 0
+        y_end_r = self.ylim
 
         # Be sure that all paths are within the boundary of the main map
-        for path in path_list:
-            if not self.boundary_check_path(path):
-                raise ValueError('Path out of boundary')
-        
-        # Now compute x_start, x_end, y_start, y_end from every path
-            x_start = 0 
-            x_end = self.x_end
-            y_start = 0
-            y_end = self.y_end
-        # I need:
-            # Minimum x coordinate from all paths
-            # Maximum x coordinate from all paths
-            # Minimum y coordinate from all paths
-            # Maximum y coordinate from all paths
-        x_start = min([min(path[:,0]) for path in path_list])
-        x_end = max([max(path[:,0]) for path in path_list])
-        y_start = min([min(path[:,1]) for path in path_list])
-        y_end = max([max(path[:,1]) for path in path_list])
-        
+        if isinstance(path_list, list):
+            # path_list is a list of paths and points
+            for path in path_list:
+                if not self.boundary_check(path):
+                    raise ValueError('Out of boundary')
+                if len(path.shape) == 1:
+                    # path is a single point
+                    x_start = path[0]
+                    x_end = path[0]
+                    y_start = path[1]
+                    y_end = path[1]
+                else:
+                    # path is an array of points
+                    x_start = min(path[:,0])
+                    x_end = max(path[:,0])
+                    y_start = min(path[:,1])
+                    y_end = max(path[:,1])
+                # Update the submap boundaries
+                if x_start > x_start_r:
+                    x_start_r = x_start
+                if x_end < x_end_r:
+                    x_end_r = x_end
+                if y_start > y_start_r:
+                    y_start_r = y_start
+                if y_end < y_end_r:
+                    y_end_r = y_end
+        else:
+            # path_list is a single path
+            # Check if we have an array or a single point 
+            if not self.boundary_check(path_list):
+                raise ValueError('Out of boundary')
+            if len(path_list.shape) == 1:
+                # path_list is a single point
+                x_start = path_list[0]
+                x_end = path_list[0]
+                y_start = path_list[1]
+                y_end = path_list[1]
+            else:
+                # path_list is an array of points
+                 x_start = min(path_list[:,0])
+                 x_end = max(path_list[:,0])
+                 y_start = min(path_list[:,1])
+                 y_end = max(path_list[:,1])
+           
+        # Add spacing to the submap
+        x_start -= spacing
+        x_end += spacing
+        y_start -= spacing
+        y_end += spacing
        
         return self.get_submap(x_start, x_end, y_start, y_end)
 
           
-    def plot(self, landmarks = False, landmarks_color = 'ro'):
+    def plot(self, landmarks = False):
         # Plot the grid
         plt.imshow(np.flipud(self.map), cmap='gray')
         plt.gca().invert_yaxis()
@@ -188,7 +230,7 @@ class Grid:
             for landmark in self.landmarks:
                 plt.plot((landmark[0]-self.x_off)/self.res, 
                          (landmark[1]-self.y_off)/self.res, 
-                         landmarks_color, markerfacecolor='none', 
+                         self.landmarks_color, markerfacecolor='none', 
                          alpha = 0.5)
 
     def plot_on(self, q, *args, submap = False, landmarks = False):
@@ -203,21 +245,34 @@ class Grid:
 
         # First asses if q is a list or a single item
         if isinstance(q, list):
-            # q is a list
+            # q is a list, multiple elements
             if submap:
-                # compute submap containing anyting in q
+                # compute submap containing anyting in q and call plot_on on the submap
+                submap = self.submap_path([q_p.pos for q_p in q])
+                submap.plot_on(q, submap=False, landmarks = landmarks)
+            else:
+                # plot grid
+                self.plot(landmarks = landmarks)
+                # plot q -- Paths objects
+                for q_p in q:
+                    if q_p.n > 1:
+                        plt.plot((q_p.pos[:,0]-self.x_off)/self.res, 
+                                 (q_p.pos[:,1]-self.y_off)/self.res, q_p.plotArgs)
+                    else:
+                        plt.plot((q_p.pos[0]-self.x_off)/self.res, 
+                                 (q_p.pos[1]-self.y_off)/self.res, q_p.plotArgs)
 
                 
-            for q_i in q:
-                if isinstance(q_i, np.ndarray):
-                    # q_i is a path
-                    if submap:
-                        submap = self.submap_path(q)
-                        submap.plot(landmarks = landmarks)
-                        plt.plot((q_i[:,0]-submap.x_off)/submap.res, (q_i[:,1]-submap.y_off)/submap.res, *args)
-                    else:
-                        plt.plot((q_i[:,0]-self.x_off)/self.res, (q_i[:,1]-self.y_off)/self.res, *args)
-                self.plot_on(q_i, *args, submap = submap, landmarks = landmarks)
+        else:
+            # q is a single element
+              if q.n > 1:
+                  plt.plot((q.pos[:,0]-self.x_off)/self.res, 
+                                 (q.pos[:,1]-self.y_off)/self.res, q.plotArgs)
+              else:
+                   plt.plot((q.pos[0]-self.x_off)/self.res, 
+                                 (q.pos[1]-self.y_off)/self.res, q.plotArgs)
+                   
+        plt.show()
 
       
 
@@ -229,7 +284,7 @@ class Grid:
         # y: y coordinate
         # return: i, j, the indices of the grid
         # 
-        if not self.boundary_check(x, y):
+        if not self._boundary_check(x, y):
             raise ValueError('Point out of boundary')
         i = int((self.Y[0] - y)/self.res)
         j = int((x - self.X[0])/self.res)
