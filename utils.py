@@ -187,7 +187,7 @@ def plot_detP(Pmatrix: np.ndarray):
 def plot_error(real, estimated):
     # Plot the error between real and estimated
     plt.figure()
-    plt.plot(real - estimated)
+    plt.plot(np.abs(real - estimated))
     plt.ylabel("error")
     plt.xlabel("t (s)")
     plt.show()
