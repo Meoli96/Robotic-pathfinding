@@ -90,12 +90,13 @@ def dead_recon(real_traj, P0, sigma_d, sigma_phi):
         F_v_ = F_v(q_hat[i][2])
 
         # Add noise to odometry
-        [d_d, d_phi] = add_noise([d_d, d_phi], [sigma_d, sigma_phi])
+        #[d_d, d_phi] = add_noise([d_d, d_phi], [sigma_d, sigma_phi])
         
         # Compute q_hat and P
         q_hat[i+1] = q_hat[i] + np.array(
-            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), d_phi]) 
-        P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ V @ F_v_.T
+            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), q_hat[i][2] + d_phi]) 
+        q_hat[i+1][2] = angle_mod_pi(q_hat[i+1][2])
+        P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T #+ F_v_ @ V @ F_v_.T
 
     # Return
     return q_hat, P_arr
@@ -127,7 +128,7 @@ def EKF(grid: Grid, real_traj: np.ndarray, P0, sigma_d: float, sigma_phi, sigma_
         
         # Compute q_hat and P
         q_hat[i+1] = q_hat[i] + np.array(
-            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), d_phi]) 
+            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), angle_mod_pi(q_hat[i][2] + d_phi)]) 
         P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ np.diag([sigma_d**2, sigma_phi**2]) @ F_v_.T
         
         
