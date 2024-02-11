@@ -4,7 +4,7 @@ from utils import error_ellipse
 class Grid:
     def __init__(self, *, xlim=0, ylim=0, corner = 'ul', res = 1, 
                  image: np.ndarray = None, obstacle: np.ndarray = None, 
-                 landmarks:tuple = None, landmarks_color = 'ro' ):
+                 landmarks:tuple = None, landmarks_color = 'yo' ):
         # Initialize the attributes of the Grid class
         # xlim: x limit of the grid
         # ylim: y limit of the grid
@@ -110,29 +110,28 @@ class Grid:
     
     def get_submap(self, x_start, x_end, y_start, y_end):
         # Check if the points are inside the boundary
-        if not self._boundary_check(x_start, y_start) or not self._boundary_check(x_end, y_end):
-            # Who is the offender?
-            if not self._boundary_check(x_start, y_start):
-                # Again, who is the offender?
-                if x_start < 0:
-                    x_start = 0
-                if x_start > self.xlim:
-                    x_start = self.xlim
-                if y_start < 0:
-                    y_start = 0
-                if y_start > self.ylim:
-                    y_start = self.ylim
+        
+        if not self._boundary_check(x_start, y_start):
+            # Again, who is the offender?
+            if x_start < 0:
+                x_start = 0
+            if x_start > self.xlim:
+                x_start = self.xlim
+            if y_start < 0:
+                y_start = 0
+            if y_start > self.ylim:
+                y_start = self.ylim
             
-            if not self._boundary_check(x_end, y_end):
-                # Again, who is the offender?
-                if x_end < 0:
-                    x_end = 0
-                if x_end > self.xlim:
-                    x_end = self.xlim
-                if y_end < 0:
-                    y_end = 0
-                if y_end > self.ylim:
-                    y_end = self.ylim
+        if not self._boundary_check(x_end, y_end):
+            # Again, who is the offender?
+            if x_end < 0:
+                x_end = 0
+            if x_end > self.xlim:
+                x_end = self.xlim
+            if y_end < 0:
+                y_end = 0
+            if y_end > self.ylim:
+                y_end = self.ylim
         # Now we are sure that the points are inside the boundary
         # Get the indices of the points
         i_start, j_start = self.xy2ij(x_start, y_start)
@@ -150,12 +149,18 @@ class Grid:
             if landmark[0] >= x_start and landmark[0] <= x_end and landmark[1] >= y_start and landmark[1] <= y_end:
                 sub_landmarks.append(landmark)
         
-        subgrid = Grid(xlim = x_end - x_start, ylim = y_end - y_start, corner = self.corner,landmarks=sub_landmarks, res = self.res, image = sub_image, obstacle = sub_obst)
+        subgrid = Grid(xlim = x_end - x_start, ylim = y_end - y_start, corner = self.corner,
+                       landmarks=sub_landmarks, res = self.res, image = sub_image, 
+                       obstacle = sub_obst, landmarks_color = self.landmarks_color)
         subgrid.x_off = x_start
         subgrid.y_off = y_start
         return subgrid
     
-    def submap_path(self, path_list: np.ndarray, spacing = 1000):
+    def submap_path(self, path_list: np.ndarray,
+                    left_spacing = 1000,
+                    right_spacing = 1000,
+                    up_spacing = 1000,
+                    down_spacing = 1000):
         # path_list: a list of paths (array of points)
         # return: a submap containing all the paths
         x_start_r = 0
@@ -195,10 +200,10 @@ class Grid:
                  y_end = max(path_list[:,1])
            
         # Add spacing to the submap
-        x_start -= spacing
-        x_end += spacing
-        y_start -= spacing
-        y_end += spacing
+        x_start -= left_spacing
+        x_end += right_spacing
+        y_start -= down_spacing
+        y_end += up_spacing
        
         return self.get_submap(x_start, x_end, y_start, y_end)
 
@@ -216,12 +221,12 @@ class Grid:
             for landmark in self.landmarks:
                 plt.plot((landmark[0]-self.x_off)/self.res, 
                          (landmark[1]-self.y_off)/self.res, 
-                         self.landmarks_color, markerfacecolor='none', 
-                         alpha = 0.5)
+                         self.landmarks_color, markerfacecolor='none')
 
     def plot_on(self, path, *args, submap = False, 
                 landmarks = False, uncertainty = False,
-                spacing = 1000 ):
+                left_spacing = 1000, right_spacing = 1000,
+                up_spacing = 1000, down_spacing = 1000, spacing = 1000):
 
         # Plot the array on the grid
         # If submap is True, plot the array on a submap containing path
@@ -237,7 +242,11 @@ class Grid:
             # path is a list, multiple elements
             if submap:
                 # compute submap containing anyting in path and call plot_on on the submap
-                submap = self.submap_path([q_p.pos for q_p in path], spacing = spacing)
+                submap = self.submap_path([q_p.pos for q_p in path], 
+                                          left_spacing = left_spacing,
+                                          right_spacing = right_spacing,
+                                          up_spacing = up_spacing,
+                                          down_spacing = down_spacing)
                 submap.plot_on(path, submap=False, landmarks = landmarks, uncertainty=uncertainty)
             else:
                 # plot grid
@@ -252,7 +261,7 @@ class Grid:
                                  (q_p.pos[1]-self.y_off)/self.res, q_p.plotArgs)
                     if uncertainty:
                         if q_p.pos_un is not None:
-                            for i in range(0, q_p.n, 5000):
+                            for i in range(0, q_p.len, 5000):
                                 ellipse = error_ellipse((q_p.pos[i,0]-self.x_off)/self.res, 
                                                         (q_p.pos[i,1]-self.y_off)/self.res, 
                                                         q_p.pos_un[i])
@@ -282,14 +291,14 @@ class Grid:
                                  (path.pos[1]-self.y_off)/self.res, path.plotArgs)
                     if uncertainty:
                         if path.pos_un is not None:
-                            for i in range(0, path.n, 5000):
+                            for i in range(0, path.len, 5000):
                                 ellipse = error_ellipse((path.pos[i,0]-self.x_off)/self.res, 
                                                         (path.pos[i,1]-self.y_off)/self.res, 
                                                         path.pos_un[i])
                                 ax.add_artist(ellipse)
                                 ellipse.set_alpha(0.3)
                                 ellipse.set_facecolor('none')
-                                ellipse.set_edgecolor('r')
+                                ellipse.set_edgecolor()
                                 ellipse.set_linestyle('--')
         plt.show()
 

@@ -6,13 +6,15 @@ class Path:
         self.pos = np_state
         self.pos_un = np_state_un
         self.n = len(np_state.shape)
+        self.len = len(np_state)
   
         self.plotArgs = plotArgs
 
 
     def set_path(self, np_state: np.ndarray, np_state_un: np.ndarray):
         self.path = np_state
-        self.n = np_state.shape[0]
+        self.n = len(np_state.shape)
+        self.len = len(np_state)
         self.path_un = np_state_un
 
 

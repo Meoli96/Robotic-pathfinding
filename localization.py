@@ -38,6 +38,7 @@ def add_noise(value_arr, sigma_arr):
 def F_q(d_d, theta):
     # Compute F_q == dq_k+1/dq -- d_d should be without odometry noise	
     return np.array([[1, 0, -d_d * np.sin(theta)], [0, 1, d_d * np.cos(theta)], [0, 0, 1]])
+
 def F_v(theta):
     # Compute F_v == dq_k+1/dv
     return np.array([[np.cos(theta), 0], [np.sin(theta), 0], [0, 1]])
@@ -52,8 +53,7 @@ def Hq(q, t_lm: tuple):
 
 def Hv(q, t_lm: tuple):
     return np.eye(2)
-def odometry_step(q, u, sigma_d, sigma_phi):
-    a = np.random.normal(0, sigma_d)
+
 
 def dead_recon(real_traj, P0, sigma_d, sigma_phi):
     """Dead reckoning algorithm
@@ -76,6 +76,8 @@ def dead_recon(real_traj, P0, sigma_d, sigma_phi):
     # Initialize covariance array as M n*n matrix
     n = P0.shape[0]
     M = real_traj.shape[0]
+
+    V = np.diag([sigma_d**2, sigma_phi**2])
     P_arr = np.zeros((M, n, n))
     P_arr[0] = P0
 
@@ -93,13 +95,13 @@ def dead_recon(real_traj, P0, sigma_d, sigma_phi):
         # Compute q_hat and P
         q_hat[i+1] = q_hat[i] + np.array(
             [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), d_phi]) 
-        P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ np.diag([sigma_d**2, sigma_phi**2]) @ F_v_.T
+        P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ V @ F_v_.T
 
     # Return
     return q_hat, P_arr
     
 
-def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lidar_range = 100):
+def EKF(grid: Grid, real_traj: np.ndarray, P0, sigma_d: float, sigma_phi, sigma_r, sigma_theta, lidar_range = 100):
     # Initialize
     q_hat = np.zeros(real_traj.shape)
     q_hat[0] = real_traj[0]
@@ -153,7 +155,6 @@ def EKF(grid: Grid, real_traj, P0, sigma_d, sigma_phi, sigma_r, sigma_theta, lid
 
                 # Compute Kalman gain                
                 K = P_arr[i+1] @ H_q_.T @ np.linalg.inv(H_q_ @ P_arr[i+1] @ H_q_.T + H_v_ @ np.diag([sigma_r**2, sigma_theta**2]) @ H_v_.T)
-
                 
                 # Update q_hat and P
                 q_hat[i+1] = q_hat[i+1] + K @ (z_q - h_q)
