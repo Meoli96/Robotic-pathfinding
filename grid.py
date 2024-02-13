@@ -331,6 +331,7 @@ class Grid:
         # q: robot pose
         # range_max: maximum range of the lidar
         # return: a list of the coordinates of the landmarks in the map
+        range_min = range_max/5
         r_landmarks = []
         
         r_dt = [] 
@@ -340,7 +341,7 @@ class Grid:
             dist = np.linalg.norm(q[:2] - landmark)
             # compute the angle between the robot and the landmark
            
-            if dist < range_max:
+            if dist < range_max and dist > range_min:
                 r_landmarks.append(landmark)
         return r_landmarks
 

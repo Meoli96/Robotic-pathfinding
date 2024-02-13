@@ -127,8 +127,8 @@ def error_ellipse(xc, yc, cov, sigma=1, **kwargs):
     w, v = w[order], v[:,order]
     theta = np.degrees(np.arctan2(*v[:,0][::-1]))
     ellipse = Ellipse(xy=(xc,yc),
-                    width=2.*sigma*np.sqrt(w[0]),
-                    height=2.*sigma*np.sqrt(w[1]),
+                    width=0.5*sigma*np.sqrt(w[0]),
+                    height=0.5*sigma*np.sqrt(w[1]),
                     angle=theta, **kwargs)
     ellipse.set_facecolor('none')
     return ellipse

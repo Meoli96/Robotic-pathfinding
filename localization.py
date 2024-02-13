@@ -15,25 +15,23 @@ def simulate_odo(q1, q2):
     """
     # Compute perfect measure
     dd = np.linalg.norm(q2[:2] - q1[:2])
-    dphi = angle_mod_pi(q2[2] - q1[2])
+    dphi = angle_mod_2pi(q2[2] - q1[2])
     
     # Return measure
     return [dd, dphi]
 
-def add_noise(value_arr, sigma_arr):
-    if isinstance(value_arr, list) or isinstance(value_arr, tuple) or isinstance(value_arr, np.ndarray):
-        # list of values given in input
-        if (len(value_arr) != len(sigma_arr)):
-            raise ValueError("Value and sigma array must have same length")
-        value_arr = np.array(value_arr)
-        sigma_arr = np.array(sigma_arr)
+def add_noise(odo, sigma):
+    """Add noise to odometry measurements
 
-        return value_arr + np.random.normal(0, scale=sigma_arr)
-    elif (isinstance(value_arr, float) or isinstance(value_arr, int)) and (isinstance(sigma_arr, float) or isinstance(sigma_arr, int)):
-        # single value given in input
-        value_arr = np.array([value_arr])
-        sigma_arr = np.array([sigma_arr])
-        return np.random.normal( value_arr , scale = sigma_arr)
+    Args:
+        odo (list): odometry measurements
+        sigma (list): noise standard deviation
+
+    Returns:
+        list: noisy odometry measurements
+    """
+    # Add noise
+    return [odo[0] + np.random.normal(0, sigma[0]), angle_mod_2pi(odo[1] + np.random.normal(0, sigma[1]))]
 
 def F_q(d_d, theta):
     # Compute F_q == dq_k+1/dq -- d_d should be without odometry noise	
@@ -90,13 +88,13 @@ def dead_recon(real_traj, P0, sigma_d, sigma_phi):
         F_v_ = F_v(q_hat[i][2])
 
         # Add noise to odometry
-        #[d_d, d_phi] = add_noise([d_d, d_phi], [sigma_d, sigma_phi])
+        [d_d, d_phi] = add_noise([d_d, d_phi], [sigma_d, sigma_phi])
         
         # Compute q_hat and P
         q_hat[i+1] = q_hat[i] + np.array(
-            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), q_hat[i][2] + d_phi]) 
-        q_hat[i+1][2] = angle_mod_pi(q_hat[i+1][2])
-        P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T #+ F_v_ @ V @ F_v_.T
+            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]),  d_phi]) 
+        q_hat[i+1][2] = angle_mod_2pi(q_hat[i+1][2])
+        P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ V @ F_v_.T
 
     # Return
     return q_hat, P_arr
@@ -128,7 +126,8 @@ def EKF(grid: Grid, real_traj: np.ndarray, P0, sigma_d: float, sigma_phi, sigma_
         
         # Compute q_hat and P
         q_hat[i+1] = q_hat[i] + np.array(
-            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), angle_mod_pi(q_hat[i][2] + d_phi)]) 
+            [d_d * np.cos(q_hat[i][2]), d_d * np.sin(q_hat[i][2]), d_phi])
+        q_hat[i+1][2] = angle_mod_2pi(q_hat[i+1][2]) 
         P_arr[i+1] = F_q_ @ P_arr[i] @ F_q_.T + F_v_ @ np.diag([sigma_d**2, sigma_phi**2]) @ F_v_.T
         
         
@@ -151,14 +150,15 @@ def EKF(grid: Grid, real_traj: np.ndarray, P0, sigma_d: float, sigma_phi, sigma_
                 z_nq = obsv_landmark(real_traj[i+1], r_lm[i_lm]) # z_nq -- observed from real state (noiseless)
                 h_nq = obsv_landmark(q_hat[i+1], r_lm[i_lm]) # h_nq -- observed from estimated state (noiseless)
 
-                z_q = add_noise(z_nq, [sigma_r, sigma_theta])
-                h_q = add_noise(h_nq, [sigma_r, sigma_theta])
+                z_q = np.array(add_noise(z_nq, [sigma_r, sigma_theta]))
+                h_q = np.array(add_noise(h_nq, [sigma_r, sigma_theta]))
 
                 # Compute Kalman gain                
                 K = P_arr[i+1] @ H_q_.T @ np.linalg.inv(H_q_ @ P_arr[i+1] @ H_q_.T + H_v_ @ np.diag([sigma_r**2, sigma_theta**2]) @ H_v_.T)
                 
                 # Update q_hat and P
                 q_hat[i+1] = q_hat[i+1] + K @ (z_q - h_q)
+                q_hat[i+1][2] = angle_mod_2pi(q_hat[i+1][2])
                 P_arr[i+1] = (np.eye(n) - K @ H_q_) @ P_arr[i+1]
     return q_hat, P_arr, 
 
